@@ -1,0 +1,740 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "3bf69d69",
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "execution": {
+     "iopub.execute_input": "2026-04-18T13:30:55.416174Z",
+     "iopub.status.busy": "2026-04-18T13:30:55.415386Z",
+     "iopub.status.idle": "2026-04-18T13:30:56.599316Z",
+     "shell.execute_reply": "2026-04-18T13:30:56.598274Z"
+    },
+    "papermill": {
+     "duration": 1.191332,
+     "end_time": "2026-04-18T13:30:56.601345+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:55.410013+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "/kaggle/input/datasets/rabieelkharoua/predict-conversion-in-digital-marketing-dataset/digital_marketing_campaign_dataset.csv\n"
+     ]
+    }
+   ],
+   "source": [
+    "# This Python 3 environment comes with many helpful analytics libraries installed\n",
+    "# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n",
+    "# For example, here's several helpful packages to load\n",
+    "\n",
+    "import numpy as np # linear algebra\n",
+    "import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n",
+    "\n",
+    "# Input data files are available in the read-only \"../input/\" directory\n",
+    "# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n",
+    "\n",
+    "import os\n",
+    "for dirname, _, filenames in os.walk('/kaggle/input'):\n",
+    "    for filename in filenames:\n",
+    "        print(os.path.join(dirname, filename))\n",
+    "\n",
+    "# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n",
+    "# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c8073610",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002672,
+     "end_time": "2026-04-18T13:30:56.607253+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.604581+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Digital Marketing Campaign Conversion Prediction\n",
+    "### Applied ML Classification Capstone\n",
+    "\n",
+    "**Author:** Andrej Arsenijevic  \n",
+    "**Date:** April 2026 \n",
+    "**Dataset:** Digital Marketing Campaign Dataset (Kaggle)  \n",
+    "**Target Variable:** Conversion (Binary: 0 = No Conversion, 1 = Conversion)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "edd483a2",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002491,
+     "end_time": "2026-04-18T13:30:56.612637+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.610146+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Table of Contents\n",
+    "\n",
+    "1. Problem Statement and Motivation  \n",
+    "2. Hypothesis  \n",
+    "3. Dataset Selection and Ethical/Licensing Considerations  \n",
+    "4. Data Understanding, Cleaning, and Preprocessing  \n",
+    "5. Model Development and Comparison  \n",
+    "6. Evaluation, Optimization, and Diagnostics  \n",
+    "7. Impact Reporting  \n",
+    "   - 7.1 Technical Summary  \n",
+    "   - 7.2 Stakeholder-Facing Summary  \n",
+    "   - 7.3 Key Visuals  \n",
+    "   - 7.4 Limitations and Ethics Reflection"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d008662a",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00247,
+     "end_time": "2026-04-18T13:30:56.617744+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.615274+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## 1. Problem Statement and Motivation\n",
+    "\n",
+    "### 1.1 Business Context\n",
+    "\n",
+    "Digital marketing teams allocate significant budgets across multiple channels like social media, email, PPC, SEO, and referral campaigns. However, a large portion of this spend targets users unlikely to convert, resulting in wasted resources, excessive ad exposure, and reduced return on investment. A predictive model that identifies which customers are likely to convert would enable smarter budget allocation and more responsible marketing practices.\n",
+    "\n",
+    "### 1.2 ML Problem Statement (Five-Part Structure)\n",
+    "\n",
+    "> **Predict whether** a *customer* (unit) **will convert** (event) **after interacting with a digital marketing campaign** (horizon), **using demographic, behavioral, and campaign data recorded during the campaign** (evidence/prediction time), **so that marketing managers can optimise ad spend, reduce wasted impressions, and focus resources on high-intent users** (action/impact).\n",
+    "\n",
+    "### 1.3 Classification Type\n",
+    "\n",
+    "This is a **binary classification** problem:\n",
+    "- **Class 1 (Positive):** Customer converts  \n",
+    "- **Class 0 (Negative):** Customer does not convert  \n",
+    "\n",
+    "### 1.4 Motivation and Real-World Impact\n",
+    "\n",
+    "This project connects to **SDG 12: Responsible Consumption and Production**. By predicting conversion likelihood, businesses can:\n",
+    "- **Reduce wasted ad spend** on low-intent users  \n",
+    "- **Decrease unnecessary digital exposure** (fewer irrelevant ads for customers)  \n",
+    "- **Improve return on ad spend (ROAS)** by focusing on high-probability segments  \n",
+    "\n",
+    "**Target KPI:** Reduce cost per conversion by 15% while maintaining or improving total conversions over a 3–6 month period.\n",
+    "\n",
+    "### 1.5 Stakeholder Analysis\n",
+    "\n",
+    "| Stakeholder | Benefit / Risk |\n",
+    "|---|---|\n",
+    "| Marketing Managers | Direct benefit of better targeting, lower cost per conversion |\n",
+    "| CRM Teams | Direct benefit of personalized outreach to high-intent users |\n",
+    "| Customers | Indirect benefit of fewer irrelevant ads, better experience |\n",
+    "| Business (Finance) | Indirect benefit of improved ROAS and budget efficiency |\n",
+    "| Low-intent customers | Potential risk of receiving less engagement or being deprioritized |"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ae3ab606",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002655,
+     "end_time": "2026-04-18T13:30:56.623018+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.620363+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 1.6 Success Metrics and Error-Cost Trade-offs\n",
+    "\n",
+    "**Primary Metric:** F1-Score (balances precision and recall for imbalanced data)  \n",
+    "**Secondary Metrics:** ROC-AUC, Precision, Recall\n",
+    "\n",
+    "**Error-Cost Analysis:**\n",
+    "\n",
+    "| Error Type | Example | Business Cost |\n",
+    "|---|---|---|\n",
+    "| **False Positive** (predicted convert, didn't) | Budget allocated to a user who won't convert | Low–Medium — wasted ad spend |\n",
+    "| **False Negative** (predicted no convert, did) | High-intent user ignored, missed conversion | Medium — lost revenue opportunity |\n",
+    "\n",
+    "Since neither error type is catastrophically more expensive than the other, **F1-Score** is the most appropriate primary metric. However, from a budget-efficiency perspective, **precision** is slightly prioritised — we want to avoid wasting spend on users who won't convert.\n",
+    "\n",
+    "**Baseline Target:** F1-Score > 0.60 on the minority class (non-conversion)  \n",
+    "**Aspirational Target:** F1-Score > 0.75 with ROC-AUC > 0.85"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bdf5c566",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002472,
+     "end_time": "2026-04-18T13:30:56.628100+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.625628+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 1.7 Prediction Horizon and Feature Timing\n",
+    "\n",
+    "**Prediction Time:** At the point of campaign interaction (when demographic, campaign, and engagement data has been recorded).  \n",
+    "**Prediction Horizon:** Whether the customer converts during or immediately after the current campaign.  \n",
+    "**Feature Window:** All input features are recorded at or before the prediction moment.  \n",
+    "**Leakage Risk:** `ConversionRate` is suspected to be derived from the target variable itself. If it represents the outcome rather than a pre-campaign metric, it must be dropped to prevent data leakage. This will be investigated in Section 4."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "122fdeb6",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002483,
+     "end_time": "2026-04-18T13:30:56.633306+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.630823+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 1.8 Stakeholder Risk Assessment\n",
+    "\n",
+    "Using the risk scoring formula: **Risk = Severity (1–5) × Likelihood (1–5)**\n",
+    "\n",
+    "| Stakeholder | Benefit or Harm | Severity | Likelihood | Risk Score |\n",
+    "|---|---|---|---|---|\n",
+    "| Marketing Managers | Benefit | 4 | 5 | 20 |\n",
+    "| CRM Teams | Benefit | 3 | 4 | 12 |\n",
+    "| Customers (relevant ads) | Benefit | 3 | 4 | 12 |\n",
+    "| Low-intent customers (deprioritised) | Harm | 2 | 3 | 6 |\n",
+    "| Gender subgroups (biased targeting) | Harm | 4 | 2 | 8 |\n",
+    "\n",
+    "**Mitigation for harms scoring ≥ 8:**\n",
+    "- **Gender bias (Risk: 8):** Fairness analysis will be conducted in Section 6 to compare model performance across gender subgroups. If disparities are found, threshold calibration or feature removal will be considered."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d79b0735",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002624,
+     "end_time": "2026-04-18T13:30:56.638571+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.635947+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 1.9 Personal Ethical Concern\n",
+    "\n",
+    "My primary ethical concern is **automated exclusion**. If the model consistently predicts certain demographic groups as unlikely to convert, marketing teams may systematically exclude those groups from campaigns. Over time, this creates a feedback loop, so excluded users never get the chance to convert, reinforcing the model's bias. This is why gender-based fairness monitoring (and potentially by income bracket) is essential, and why human oversight should remain part of any deployment."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7ed7377e",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002606,
+     "end_time": "2026-04-18T13:30:56.643824+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.641218+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 1.10 Model Scope and Deployment Context\n",
+    "\n",
+    "**Baseline Model:** Logistic Regression — fast, interpretable, serves as a performance floor.  \n",
+    "**Stretch Model:** Gradient Boosting (or Random Forest) — higher predictive power for comparison.\n",
+    "\n",
+    "**Deployment Context:**\n",
+    "- **Runtime:** Batch prediction (daily or per-campaign cycle)\n",
+    "- **Latency:** Not time-critical — predictions inform planning, not real-time decisions\n",
+    "- **Human Review:** Yes — predictions would be reviewed by marketing managers before acting on them"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "20088b8d",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002497,
+     "end_time": "2026-04-18T13:30:56.648972+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.646475+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## 2. Hypothesis\n",
+    "\n",
+    "Based on domain understanding of digital marketing, the following hypotheses will guide the analysis:\n",
+    "\n",
+    "**H1 — Engagement drives conversion:** Customers with higher website engagement (more pages per visit, longer time on site, more website visits) are significantly more likely to convert.\n",
+    "\n",
+    "**H2 — Channel effectiveness varies:** Certain campaign channels (e.g., PPC, Email) produce higher conversion rates than others (e.g., Awareness campaigns via Social Media).\n",
+    "\n",
+    "**H3 — Behavioral signals outweigh demographics:** Features like AdSpend, WebsiteVisits, and EmailClicks are stronger predictors of conversion than Age, Gender, or Income.\n",
+    "\n",
+    "These hypotheses will be tested during exploratory data analysis and validated through feature importance analysis after model training."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "48dc24ca",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002532,
+     "end_time": "2026-04-18T13:30:56.654263+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.651731+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## 3. Dataset Selection and Ethical/Licensing Considerations\n",
+    "\n",
+    "### 3.1 Dataset Overview\n",
+    "\n",
+    "| Attribute | Detail |\n",
+    "|---|---|\n",
+    "| **Source** | Kaggle — Digital Marketing Campaign Dataset |\n",
+    "| **Records** | 8,000 customers |\n",
+    "| **Features** | 19 input features + 1 target variable |\n",
+    "| **Target** | `Conversion` (binary: 0 or 1) |\n",
+    "| **Format** | CSV |\n",
+    "| **Missing Values** | None |\n",
+    "\n",
+    "### 3.2 Licensing\n",
+    "The dataset is publicly available on Kaggle under standard Kaggle terms of use, suitable for educational and research purposes.\n",
+    "\n",
+    "### 3.3 Ethical Considerations\n",
+    "\n",
+    "- **Sensitive attribute identified:** `Gender` (Male/Female) — model fairness across gender groups will be evaluated in Section 6.\n",
+    "- **Privacy protection observed:** `AdvertisingPlatform` and `AdvertisingTool` are anonymized as \"IsConfid\" and \"ToolConfid\", indicating the data provider has taken steps to protect commercial confidentiality.\n",
+    "- **Potential leakage risk:** `ConversionRate` may encode the target variable directly. This will be investigated and addressed during preprocessing.\n",
+    "- **No personally identifiable information (PII):** CustomerID is a numeric index, not linked to real individuals.\n",
+    "\n",
+    "### 3.4 Regulatory Risk Tier\n",
+    "Under the EU AI Act framework, this project falls under the **Limited Risk** tier. Marketing optimization does not involve biometric identification, medical decisions, or law enforcement. No DPIA is required, but fairness monitoring is still a good practice."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "4cc59b43",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-18T13:30:56.661926Z",
+     "iopub.status.busy": "2026-04-18T13:30:56.660853Z",
+     "iopub.status.idle": "2026-04-18T13:31:01.130332Z",
+     "shell.execute_reply": "2026-04-18T13:31:01.129157Z"
+    },
+    "papermill": {
+     "duration": 4.475409,
+     "end_time": "2026-04-18T13:31:01.132306+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:30:56.656897+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "All libraries loaded successfully.\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Core libraries\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "import seaborn as sns\n",
+    "import warnings\n",
+    "warnings.filterwarnings('ignore')\n",
+    "\n",
+    "# Preprocessing\n",
+    "from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV, cross_val_score\n",
+    "from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder\n",
+    "from sklearn.compose import ColumnTransformer\n",
+    "from sklearn.pipeline import Pipeline\n",
+    "\n",
+    "# Models\n",
+    "from sklearn.linear_model import LogisticRegression\n",
+    "from sklearn.tree import DecisionTreeClassifier\n",
+    "from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier\n",
+    "\n",
+    "# Evaluation\n",
+    "from sklearn.metrics import (\n",
+    "    classification_report, confusion_matrix, ConfusionMatrixDisplay,\n",
+    "    roc_auc_score, roc_curve, precision_recall_curve,\n",
+    "    f1_score, accuracy_score, precision_score, recall_score\n",
+    ")\n",
+    "\n",
+    "# Imbalance handling\n",
+    "from imblearn.over_sampling import SMOTE\n",
+    "from imblearn.pipeline import Pipeline as ImbPipeline\n",
+    "\n",
+    "# Settings\n",
+    "plt.style.use('seaborn-v0_8-whitegrid')\n",
+    "sns.set_palette(\"husl\")\n",
+    "pd.set_option('display.max_columns', None)\n",
+    "\n",
+    "print(\"All libraries loaded successfully.\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "f50fca4a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-18T13:31:01.141012Z",
+     "iopub.status.busy": "2026-04-18T13:31:01.139846Z",
+     "iopub.status.idle": "2026-04-18T13:31:01.235712Z",
+     "shell.execute_reply": "2026-04-18T13:31:01.234637Z"
+    },
+    "papermill": {
+     "duration": 0.102407,
+     "end_time": "2026-04-18T13:31:01.237760+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:31:01.135353+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Dataset shape: (8000, 20)\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>CustomerID</th>\n",
+       "      <th>Age</th>\n",
+       "      <th>Gender</th>\n",
+       "      <th>Income</th>\n",
+       "      <th>CampaignChannel</th>\n",
+       "      <th>CampaignType</th>\n",
+       "      <th>AdSpend</th>\n",
+       "      <th>ClickThroughRate</th>\n",
+       "      <th>ConversionRate</th>\n",
+       "      <th>WebsiteVisits</th>\n",
+       "      <th>PagesPerVisit</th>\n",
+       "      <th>TimeOnSite</th>\n",
+       "      <th>SocialShares</th>\n",
+       "      <th>EmailOpens</th>\n",
+       "      <th>EmailClicks</th>\n",
+       "      <th>PreviousPurchases</th>\n",
+       "      <th>LoyaltyPoints</th>\n",
+       "      <th>AdvertisingPlatform</th>\n",
+       "      <th>AdvertisingTool</th>\n",
+       "      <th>Conversion</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>8000</td>\n",
+       "      <td>56</td>\n",
+       "      <td>Female</td>\n",
+       "      <td>136912</td>\n",
+       "      <td>Social Media</td>\n",
+       "      <td>Awareness</td>\n",
+       "      <td>6497.870068</td>\n",
+       "      <td>0.043919</td>\n",
+       "      <td>0.088031</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2.399017</td>\n",
+       "      <td>7.396803</td>\n",
+       "      <td>19</td>\n",
+       "      <td>6</td>\n",
+       "      <td>9</td>\n",
+       "      <td>4</td>\n",
+       "      <td>688</td>\n",
+       "      <td>IsConfid</td>\n",
+       "      <td>ToolConfid</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>8001</td>\n",
+       "      <td>69</td>\n",
+       "      <td>Male</td>\n",
+       "      <td>41760</td>\n",
+       "      <td>Email</td>\n",
+       "      <td>Retention</td>\n",
+       "      <td>3898.668606</td>\n",
+       "      <td>0.155725</td>\n",
+       "      <td>0.182725</td>\n",
+       "      <td>42</td>\n",
+       "      <td>2.917138</td>\n",
+       "      <td>5.352549</td>\n",
+       "      <td>5</td>\n",
+       "      <td>2</td>\n",
+       "      <td>7</td>\n",
+       "      <td>2</td>\n",
+       "      <td>3459</td>\n",
+       "      <td>IsConfid</td>\n",
+       "      <td>ToolConfid</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>8002</td>\n",
+       "      <td>46</td>\n",
+       "      <td>Female</td>\n",
+       "      <td>88456</td>\n",
+       "      <td>PPC</td>\n",
+       "      <td>Awareness</td>\n",
+       "      <td>1546.429596</td>\n",
+       "      <td>0.277490</td>\n",
+       "      <td>0.076423</td>\n",
+       "      <td>2</td>\n",
+       "      <td>8.223619</td>\n",
+       "      <td>13.794901</td>\n",
+       "      <td>0</td>\n",
+       "      <td>11</td>\n",
+       "      <td>2</td>\n",
+       "      <td>8</td>\n",
+       "      <td>2337</td>\n",
+       "      <td>IsConfid</td>\n",
+       "      <td>ToolConfid</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>8003</td>\n",
+       "      <td>32</td>\n",
+       "      <td>Female</td>\n",
+       "      <td>44085</td>\n",
+       "      <td>PPC</td>\n",
+       "      <td>Conversion</td>\n",
+       "      <td>539.525936</td>\n",
+       "      <td>0.137611</td>\n",
+       "      <td>0.088004</td>\n",
+       "      <td>47</td>\n",
+       "      <td>4.540939</td>\n",
+       "      <td>14.688363</td>\n",
+       "      <td>89</td>\n",
+       "      <td>2</td>\n",
+       "      <td>2</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2463</td>\n",
+       "      <td>IsConfid</td>\n",
+       "      <td>ToolConfid</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>8004</td>\n",
+       "      <td>60</td>\n",
+       "      <td>Female</td>\n",
+       "      <td>83964</td>\n",
+       "      <td>PPC</td>\n",
+       "      <td>Conversion</td>\n",
+       "      <td>1678.043573</td>\n",
+       "      <td>0.252851</td>\n",
+       "      <td>0.109940</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2.046847</td>\n",
+       "      <td>13.993370</td>\n",
+       "      <td>6</td>\n",
+       "      <td>6</td>\n",
+       "      <td>6</td>\n",
+       "      <td>8</td>\n",
+       "      <td>4345</td>\n",
+       "      <td>IsConfid</td>\n",
+       "      <td>ToolConfid</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   CustomerID  Age  Gender  Income CampaignChannel CampaignType      AdSpend  \\\n",
+       "0        8000   56  Female  136912    Social Media    Awareness  6497.870068   \n",
+       "1        8001   69    Male   41760           Email    Retention  3898.668606   \n",
+       "2        8002   46  Female   88456             PPC    Awareness  1546.429596   \n",
+       "3        8003   32  Female   44085             PPC   Conversion   539.525936   \n",
+       "4        8004   60  Female   83964             PPC   Conversion  1678.043573   \n",
+       "\n",
+       "   ClickThroughRate  ConversionRate  WebsiteVisits  PagesPerVisit  TimeOnSite  \\\n",
+       "0          0.043919        0.088031              0       2.399017    7.396803   \n",
+       "1          0.155725        0.182725             42       2.917138    5.352549   \n",
+       "2          0.277490        0.076423              2       8.223619   13.794901   \n",
+       "3          0.137611        0.088004             47       4.540939   14.688363   \n",
+       "4          0.252851        0.109940              0       2.046847   13.993370   \n",
+       "\n",
+       "   SocialShares  EmailOpens  EmailClicks  PreviousPurchases  LoyaltyPoints  \\\n",
+       "0            19           6            9                  4            688   \n",
+       "1             5           2            7                  2           3459   \n",
+       "2             0          11            2                  8           2337   \n",
+       "3            89           2            2                  0           2463   \n",
+       "4             6           6            6                  8           4345   \n",
+       "\n",
+       "  AdvertisingPlatform AdvertisingTool  Conversion  \n",
+       "0            IsConfid      ToolConfid           1  \n",
+       "1            IsConfid      ToolConfid           1  \n",
+       "2            IsConfid      ToolConfid           1  \n",
+       "3            IsConfid      ToolConfid           1  \n",
+       "4            IsConfid      ToolConfid           1  "
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df = pd.read_csv(\"/kaggle/input/datasets/rabieelkharoua/predict-conversion-in-digital-marketing-dataset/digital_marketing_campaign_dataset.csv\")\n",
+    "print(f\"Dataset shape: {df.shape}\")\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e39f2546",
+   "metadata": {
+    "papermill": {
+     "duration": 0.003121,
+     "end_time": "2026-04-18T13:31:01.244310+00:00",
+     "exception": false,
+     "start_time": "2026-04-18T13:31:01.241189+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 3.5 Eight-Point Pre-Download Heuristic\n",
+    "\n",
+    "| # | Check | Score (1–5) | Evidence |\n",
+    "|---|---|---|---|\n",
+    "| 1 | **Alignment** | ⭐ 5 | Binary target (`Conversion`: 0/1) directly matches our framed problem — predicting customer conversion from campaign data |\n",
+    "| 2 | **Label Veracity** | ⭐ 3 | Labels are clean (no nulls, only 0/1), but labeling method is unknown — likely automated from campaign logs rather than expert-labeled |\n",
+    "| 3 | **Scale** | ⭐ 4 | 8,000 records total. Minority class has 988 examples — well above the 50-example pilot minimum, though resampling will still be needed |\n",
+    "| 4 | **Class Balance** | ⭐ 2 | Imbalanced at 7.1:1 ratio (87.6% positive vs 12.3% negative). Will require SMOTE, class weights, or undersampling strategies |\n",
+    "| 5 | **File Integrity** | ⭐ 5 | Zero nulls, zero duplicate rows, zero duplicate IDs, no negative values in numeric fields, all ranges are plausible (Age: 18–69, Income: 20K–150K) |\n",
+    "| 6 | **Documentation** | ⭐ 3 | Column names are self-descriptive, but no formal data dictionary or README from the author. No timestamp metadata or collection methodology documented |\n",
+    "| 7 | **Ethics** | ⭐ 4 | `Gender` is a sensitive attribute — fairness analysis required. No PII (no names, emails, phones). Two columns anonymized by provider (`IsConfid`, `ToolConfid`). `EmailOpens`/`EmailClicks` are behavioral metrics, not personal email content |\n",
+    "| 8 | **Access Hurdles** | ⭐ 5 | Freely available on Kaggle, no API key, no IRB, standard Kaggle license suitable for educational use |\n",
+    "\n",
+    "**Composite Score: 31 / 40**\n",
+    "\n",
+    "### Decision: ✅ PROCEED\n",
+    "\n",
+    "- **Alignment (5) and Ethics (4)** both exceed the ≤3 skip threshold\n",
+    "- **Class imbalance (2)** is the primary concern — addressed via SMOTE and class weights in modeling\n",
+    "- **Documentation (3)** gap is mitigated by our own feature dictionary in the PRD\n",
+    "- **Two zero-variance columns** (`AdvertisingPlatform`, `AdvertisingTool`) will be dropped during preprocessing\n",
+    "- **`ConversionRate`** flagged as a leakage risk — will be investigated and likely dropped"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "databundleVersionId": 8897647,
+     "datasetId": 5249362,
+     "sourceId": 8742946,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "dockerImageVersionId": 31328,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.12"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 10.232874,
+   "end_time": "2026-04-18T13:31:01.967765+00:00",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2026-04-18T13:30:51.734891+00:00",
+   "version": "2.7.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
